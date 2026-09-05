@@ -156,7 +156,7 @@ The fork's main infrastructure change. See `tools/helius-keys.js` for the implem
 - `buildEnhancedUrl(path)` produces a per-call `https://api.helius.xyz/{path}?api-key=KEY`
 - `callWithFallback(urlBuilder, options)` tries each key in order before throwing
 
-**Effective quota**: 3 free-tier Helius accounts = 150,000 RPC calls/day (3× the single-key limit).
+**Effective quota**: Each Helius free-tier account = 1,000,000 credits/month (NOT per day). At typical burn rate (100k+/day with 3 open positions), 1 key = ~10 days, 3 keys = ~30 days, 5+ keys = sustained operation.
 
 **Backward compatibility**: if `HELIUS_API_KEYS` is empty and `HELIUS_API_KEY` is set, the single key is used.
 
@@ -175,7 +175,7 @@ The fork ships tighter defaults suitable for live capital rather than paper test
 | `trailingTriggerPct` | 5 | Trailing activates after a +5% move, giving positions room to develop. |
 | `trailingDropPct` | 2 | Exits only when price drops 2% from peak — avoids noise-triggered exits at 0.5%. |
 | `positionSizePct` | 0 | Fixed per-position deploy (uses `deployAmountSol` as the constant). Removes wallet-balance scaling. |
-| `pnlPollIntervalSec` | 10 | 70% fewer Helius calls vs the 3s default. Slightly less real-time PnL tracking. |
+| `pnlPollIntervalSec` | 10 | 70% fewer Helius calls vs the 3s default. Slightly less real-time PnL tracking. At 3 open positions, this alone saves ~7,200 calls/day. |
 | `pnlConfirmTicks` | 10 | 10 consecutive ticks (~30s) at -15% before stop-loss fires. Filters single-tick noise. |
 | `pnlSource` | meteora | PnL from Meteora portfolio API includes fee accrual and IL; RPC raw reads are noisier. |
 | `blockPvpSymbols` | true | Hard-skip pools with PvP-rival symbols (pump.fun sniper wars) instead of just downranking. |
@@ -199,13 +199,25 @@ The fork ships tighter defaults suitable for live capital rather than paper test
 ## Operational notes
 
 ### Helius dashboard
-- Free tier: 50,000 credits/day per API key
-- Recommended: 3+ accounts = 150k+ credits/day effective
+- **Quota**: 1,000,000 compute units/month per API key (NOT per day)
+- **Real-world burn rate** with this fork's settings: 100,000+ credits/day at 3 open positions
+- **Implication**: 1 free key lasts ~10 days at typical activity; 3 keys = ~30 days; 5+ keys = 1+ month
+- **Recommended**: 5-10 free-tier keys via multiple email signups for sustained 1-bot operation
 - Monitor usage: https://dashboard.helius.dev
 
+### Why credits burn so fast
+- PnL poller runs every 10s × 3 open positions = ~10,800 calls/day for PnL alone
+- Opportunity poll every 45s = ~1,920 calls/day
+- Screening + management cycles = ~1,000-2,000 calls/day
+- Each deploy/close = 5-20 calls
+- Result: typical active bot = 100k-150k credits/day, scaling with position count and volatility
+
 ### Rotation strategy
-- 3-5 keys is the sweet spot for a single bot
-- More than 10 keys adds setup complexity without meaningful quota gain at this scale
+- **Real-world burn**: 1 active bot with 3 open positions = 100,000+ credits/day
+- **1 free key** = 1M credits/month = lasts ~10 days at typical activity
+- **3 free keys** = ~30 days of operation
+- **5-10 free keys** = sustained 1-bot operation for 1+ month
+- More than 10 keys adds setup complexity without meaningful quota gain
 - Rotate keys quarterly to avoid stale-account issues
 
 ### Risk monitoring
