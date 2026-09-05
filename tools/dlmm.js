@@ -13,6 +13,7 @@ import BN from "bn.js";
 import bs58 from "bs58";
 import { config, computeDeployAmount, MIN_SAFE_BINS_BELOW } from "../config.js";
 import { log } from "../logger.js";
+import { buildRpcUrl } from "./helius-keys.js";
 import {
   trackPosition,
   markOutOfRange,
@@ -82,7 +83,10 @@ let _wallet = null;
 
 function getConnection() {
   if (!_connection) {
-    _connection = new Connection(process.env.RPC_URL, "confirmed");
+    // Prefer round-robin RPC URL built from HELIUS_API_KEYS pool.
+    // Fall back to RPC_URL env var for legacy / non-Helius providers.
+    const rpcUrl = buildRpcUrl() || process.env.RPC_URL;
+    _connection = new Connection(rpcUrl, "confirmed");
   }
   return _connection;
 }

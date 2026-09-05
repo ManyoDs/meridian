@@ -1,6 +1,8 @@
 import fs from "fs";
 import { REPO_ROOT, repoPath } from "./repo-root.js";
 import { getScreeningDefaultsForTimeframe, normalizeTimeframe, scaleScreeningToTimeframe, TIMEFRAME_SCREENING_SCALES } from "./screening-scales.js";
+import { setKeys as setHeliusKeys } from "./tools/helius-keys.js";
+import { log } from "./logger.js";
 
 export { REPO_ROOT, repoPath, getScreeningDefaultsForTimeframe, normalizeTimeframe, scaleScreeningToTimeframe, TIMEFRAME_SCREENING_SCALES };
 
@@ -42,6 +44,26 @@ if (u.dryRun !== undefined) process.env.DRY_RUN ||= String(u.dryRun);
 if (u.publicApiKey) process.env.PUBLIC_API_KEY ||= u.publicApiKey;
 if (u.agentMeridianApiUrl) process.env.AGENT_MERIDIAN_API_URL ||= u.agentMeridianApiUrl;
 if (u.telegramChatId) process.env.TELEGRAM_CHAT_ID ||= String(u.telegramChatId);
+
+// ─── Helius multi-key pool ────────────────────────────────────
+// Parse HELIUS_API_KEYS (comma-separated) at startup. Falls back
+// to the legacy single HELIUS_API_KEY env var so existing setups
+// keep working. The pool is exposed to runtime via setHeliusKeys().
+const _heliusKeysRaw = process.env.HELIUS_API_KEYS || "";
+const _heliusKeysList = _heliusKeysRaw
+  .split(",")
+  .map((k) => k.trim())
+  .filter(Boolean);
+if (_heliusKeysList.length === 0 && process.env.HELIUS_API_KEY) {
+  _heliusKeysList.push(process.env.HELIUS_API_KEY);
+}
+if (_heliusKeysList.length > 0) {
+  setHeliusKeys(_heliusKeysList);
+  log(
+    "startup",
+    `Helius multi-key pool: ${_heliusKeysList.length} key(s) loaded for round-robin`,
+  );
+}
 
 const indicatorUserConfig = u.chartIndicators ?? {};
 

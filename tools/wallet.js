@@ -8,6 +8,7 @@ import {
 import bs58 from "bs58";
 import { log } from "../logger.js";
 import { config } from "../config.js";
+import { getNextKey, buildEnhancedUrl, getKeyCount } from "./helius-keys.js";
 
 let _connection = null;
 let _wallet = null;
@@ -64,14 +65,14 @@ export async function getWalletBalances() {
     return { wallet: null, sol: 0, sol_price: 0, sol_usd: 0, usdc: 0, tokens: [], total_usd: 0, error: "Wallet not configured" };
   }
 
-  const HELIUS_KEY = process.env.HELIUS_API_KEY;
-  if (!HELIUS_KEY) {
-    log("wallet_error", "HELIUS_API_KEY not set in .env");
-    return { wallet: walletAddress, sol: 0, sol_price: 0, sol_usd: 0, usdc: 0, tokens: [], total_usd: 0, error: "Helius API key missing" };
+  const heliusKeys = getKeyCount();
+  if (heliusKeys === 0) {
+    log("wallet_error", "No Helius API key(s) configured (set HELIUS_API_KEYS in .env)");
+    return { wallet: walletAddress, sol: 0, sol_price: 0, sol_usd: 0, usdc: 0, tokens: [], total_usd: 0, error: "Helius API key(s) missing" };
   }
 
   try {
-    const url = `https://api.helius.xyz/v1/wallet/${walletAddress}/balances?api-key=${HELIUS_KEY}`;
+    const url = buildEnhancedUrl(`v1/wallet/${walletAddress}/balances`);
     const res = await fetch(url);
     
     if (!res.ok) {
